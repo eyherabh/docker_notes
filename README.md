@@ -42,3 +42,59 @@ Successfully tagged test:latest
 but not with the results that one would have expected should the backstick be replaced with a slash.
 
 The specific error above stems from a typo while experimenting with different escape characters in a casual environment, and it is hopefully rare enough to care. However, what is distressing is the fact that the error messages, which informative about what was the problem during the build, are uninformative on their origin within the Dockerfile. In fact, searching for explanations on this error message led to quite many different alternatives (e.g. see [here](https://github.com/moby/moby/issues/31702)), none of which was the one happening in this case.
+
+### Problems with the `syntax` parser directive
+
+As stated in the dockerfile reference [[1]], the `syntax` parser directive allows one to specify the dockerfile builder to use. This feature is there said to be enabled only if the BuildKit backend is used. Unmentioned explicitly is the fact that, when the BuildKit backend is not used, the line containing the directive is parsed as a comment, thereby causing all subsequent parser directives to be parsed as comments as well.
+
+To illustrate this, consider the following dockerfile
+```
+# syntax=docker/dockerfile
+# escape=`
+FROM scratch
+ADD alpine-minirootfs-3.12.0-x86_64.tar.gz /
+RUN echo "Hello world" `
+    > /home/hello_world
+```
+which, after running 
+```
+docker build --no-cache=true -t alpine:test2 -f Dockerfile .
+```
+produces the following output
+```
+Sending build context to Docker daemon  74.69MB
+Error response from daemon: Dockerfile parse error line 6: unknown instruction: >
+```
+showing that the `escape` parser directive has not been taken into account. I believe this is because, since BuildKit is not used, the `syntax` parser directive was interpreted as a comment. Hence, as mentioned in the dockerfile reference, docker stops interpreting any subsequent parser directives as such.
+
+On the contrary, consider now the following Dockerfile
+```
+# escape=`
+# syntax=docker/dockerfile
+FROM scratch
+ADD alpine-minirootfs-3.12.0-x86_64.tar.gz /
+RUN echo "Hello world" `
+    > /home/hello_world
+```
+which produces the following output after running the same build command
+```
+Sending build context to Docker daemon  74.69MB
+Step 1/3 : FROM scratch
+ ---> 
+Step 2/3 : ADD alpine-minirootfs-3.12.0-x86_64.tar.gz /
+ ---> 630b99176fe4
+Step 3/3 : RUN echo "Hello world"     > /home/hello_world
+ ---> Running in 3732c6d82e8a
+Removing intermediate container 3732c6d82e8a
+ ---> 87ba37bfb242
+Successfully built 87ba37bfb242
+Successfully tagged alpine:test2
+```
+showing that the `escape` parser directive was taken into account and now the backstick is taken as the escape character.
+
+In conclusions, the order of the parser directives is important if the same dockerfile is intended to be portable across backends.
+
+## References
+[1]: https://docs.docker.com/engine/reference/builder/#parser-directives
+
+1. [Dockerfile reference](https://docs.docker.com/engine/reference/builder/#parser-directives)
