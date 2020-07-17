@@ -99,13 +99,69 @@ In conclusions, the order of the parser directives is important if the same dock
 
 ### ARG values in multistage builds
 
-The values defined by the ARG instruction are said to be available when building an image but not when running it, and not everywhere in the build unless special care is taken [[2]],[3]]. For example, building an image with the following dockerfile
+The values defined by the ARG instruction are only available when building an image but their scope depends on where they are declared within the dockerfile [[2]],[3]]. For example, consider [this dockerfile](dockerfiles/ARG_scope/Dockerfile_ARG_scope_test_01) reproduced below
 ```
+ARG version=latest
+ARG last_image=alpine
+ARG p1=p1
+FROM alpine:$version as a1
+ARG q1=q1
+ARG f1=/home/${p1:-mp1}${q1:-mq1}
+RUN touch "$f1"
 
+ARG p2=p2
+FROM alpine:$version as a2
+ARG q2=q2
+ARG f2=/home/${p1:-mp1}${q1:-mq1}${p2:-mp2}${q2:-mq2}
+RUN touch "$f2"
 
-As mention in [[3]], the ARG instruction defines default values that can be overwritten at build-time, e.g. by passing the values withAs mention in [[2]], ARG can appear before FROM
+ARG p3=p3
+FROM $last_image:$version
+COPY --from=a1 "$f1" "${f1:-/home/mf1}"
+COPY --from=a2 "$f2" "${f2:-/home/mf2}"
+ARG q3=q3
+ARG f3=/home/${p1:-mp1}${q1:-mq1}${p2:-mp2}${q2:-mq2}${p3:-mp3}${q3:-mq3}
+RUN touch "$f3"
 
-Under construction...
+ENTRYPOINT ["/bin/sh"]
+```
+This dockerfile contains three FORM instructions and three build stages. In addition, it defines the variables `version` and `last_image` before the first FROM. Finally, it defines three variables `p1`, `p2`, and `p3` which pretend to be outside the build stages, and `q1`, `q2` and `q3` which are within the build stages.
+
+With this dockerfile, the command
+```bash
+docker build -t ARG_scope .
+```
+yields an image with the file `/home/mp1mq1mp2mq2mp3q3`, thereby indicating that none of `p1`, `q1`, `p2`, `q2`, and `p3` are available within the third build stage. This was actually expected and consistent with [[2]] and [[3]]. We can try and make them available by mmodifying the third stage of the dockerfile following [[2]], e.g. by inserting
+```
+ARG p1
+ARG p2
+ARG p3
+ARG q1
+ARG q2
+```
+before `ARG q3=q3` (see [this dockerfile](dockerfiles/ARG_scope/Dockerfile_ARG_scope_test_02)). However, the image produced contains the file `/home/p1mq1mp2mq2mp3q3`, thereby indicating that `p1` is available but not the others.
+
+The variables `version` and `last_image` are accessible from all FROM instructions. This can be verified by running the command
+```bash
+docker build --build-arg last_image=hello -t ARG_scope .
+```
+and noticing that the build fails because the image `hello:latest` cannot be located. Further, modifying the `last_image` variable before the last FROM as below (see [this dockerfile](dockerfiles/ARG_scope/Dockerfile_ARG_scope_test_03))
+```
+ARG last_image=hello
+FROM  $last_image:$version
+```
+does not have the same effect, indicating that, once set, variables defined before the first FROM cannot be modified dynamically for subsequent FROM instructions.
+
+In conclusion, it seems to me that:
+
++ ARG variables defined before the first FROM 
+  + are available for all FROMs.
+  + cannot be modified so that different FROMs see different values.
+  + can be made available within each build stage following [[2]].
++ ARG variables defined between FROM instructions
+  + only belong to that build stage.
+  + cannot be made available to other build stages.
+  
 
 ## References
 [1]: https://docs.docker.com/engine/reference/builder/#parser-directives

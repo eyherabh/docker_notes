@@ -1,0 +1,32 @@
+# Initial dockerfile for testing ARG scope
+# Shows that ARG values defined before the first FROM are also available for the subsequent FROMs but not within the builds.
+
+ARG version=latest
+ARG last_image=alpine
+ARG p1=p1
+FROM alpine:$version as a1
+ARG q1=q1
+ARG f1=/home/${p1:-mp1}${q1:-mq1}
+RUN touch "$f1"
+
+ARG p2=p2
+FROM alpine:$version as a2
+ARG q2=q2
+ARG f2=/home/${p1:-mp1}${q1:-mq1}${p2:-mp2}${q2:-mq2}
+RUN touch "$f2"
+
+ARG p3=p3
+FROM $last_image:$version
+COPY --from=a1 "$f1" "${f1:-/home/mf1}"
+COPY --from=a2 "$f2" "${f2:-/home/mf2}"
+ARG p1
+ARG p2
+ARG p3
+ARG q1
+ARG q2
+ARG q3=q3
+ARG f3=/home/${p1:-mp1}${q1:-mq1}${p2:-mp2}${q2:-mq2}${p3:-mp3}${q3:-mq3}
+RUN touch "$f3"
+
+ENTRYPOINT ["/bin/sh"]
+
