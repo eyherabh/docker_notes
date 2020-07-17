@@ -3,7 +3,7 @@ Notes, tips and issues that may be useful for docker development
 
   * [Dockerfile](#dockerfile)
    * [Errors in ADD pass unnoticed](#errors-in-add-pass-unnoticed)
-   * [Problems with the `syntax` parser directive](#problems-with-the-`syntax`-parser-directive)
+   * [Problems with the `syntax` parser directive](#problems-with-the-syntax-parser-directive)
    * [ARG values in multistage builds](#arg-values-in-multistage-builds)
   * [References](#references)
 
