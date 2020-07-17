@@ -1,3 +1,6 @@
+# Initial dockerfile for testing ARG scope
+# Shows that ARG values defined before the first FROM are also available for the subsequent FROMs but not within the builds.
+
 ARG version=latest
 ARG last_image=alpine
 ARG p1=p1
