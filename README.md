@@ -99,8 +99,17 @@ In conclusions, the order of the parser directives is important if the same dock
 
 ### ARG values in multistage builds
 
+The values defined by the ARG instruction are said to be available when building an image but not when running it [[2]],[3]]. However, they are not available everywhere during the build unless special care is taken. 
+
+As mention in [[3]], the ARG instruction defines default values that can be overwritten at build-time, e.g. by passing the values withAs mention in [[2]], ARG can appear before FROM
+
+Under construction...
 
 ## References
 [1]: https://docs.docker.com/engine/reference/builder/#parser-directives
+[2]: https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+[3]: https://vsupalov.com/docker-arg-env-variable-guide/
 
-1. [Dockerfile reference](https://docs.docker.com/engine/reference/builder/#parser-directives)
+1. [Dockerfile reference: Parser directives](https://docs.docker.com/engine/reference/builder/#parser-directives)
+2. [Dockerfile reference: How ARG and FROM interact](https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact)
+3. https://vsupalov.com/docker-arg-env-variable-guide/
