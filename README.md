@@ -1,12 +1,11 @@
 # Docker notes
 Notes, tips and issues that may be useful for docker development
 
-  * [ Dockerfile](#dockerfile)
-   * [ Errors in ADD pass unnoticed](#errors-in add pass unnoticed)
-   * [ Problems with the `syntax` parser directive](#problems-with the `syntax` parser directive)
-  * [ References](#references)
-
-## Dockerfile
+  * [Dockerfile](#dockerfile)
+   * [Errors in ADD pass unnoticed](#errors-in-add-pass-unnoticed)
+   * [Problems with the `syntax` parser directive](#problems-with-the-`syntax`-parser-directive)
+   * [ARG values in multistage builds](#arg-values-in-multistage-builds)
+  * [References](#references)
 
 ### Errors in ADD pass unnoticed
 
@@ -97,6 +96,9 @@ Successfully tagged alpine:test2
 showing that the `escape` parser directive was taken into account and now the backstick is taken as the escape character.
 
 In conclusions, the order of the parser directives is important if the same dockerfile is intended to be portable across backends.
+
+### ARG values in multistage builds
+
 
 ## References
 [1]: https://docs.docker.com/engine/reference/builder/#parser-directives
