@@ -2,8 +2,6 @@
 
 FROM scratch
 COPY hello /test/
-VOLUME /test
-COPY hello_again /test/
 CMD [""]
 
 

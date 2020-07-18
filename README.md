@@ -5,6 +5,8 @@ Notes, tips and issues that may be useful for docker development
    * [Errors in ADD pass unnoticed](#errors-in-add-pass-unnoticed)
    * [Problems with the `syntax` parser directive](#problems-with-the-syntax-parser-directive)
    * [ARG values in multistage builds](#arg-values-in-multistage-builds)
+   * [Preserve changes after declaring VOLUME](#preserve-changes-after-declaring-volume)
+   * [Missing CMD and ENTRYPOINT](#missing-cmd-and-entrypoint)
   * [References](#references)
 
 ### Errors in ADD pass unnoticed
@@ -162,12 +164,100 @@ In conclusion, it seems to me that:
   + only belong to that build stage.
   + cannot be made available to other build stages.
   
+### Preserve changes after declaring VOLUME
+
+Changes after declaring a volume are said to be discarded [[4]], but that actually depends on how the change is made. Consider [this dockerfile](dockerfiles/VOLUME/Dockerfile_VOLUME_test_01)
+```
+FROM alpine
+RUN mkdir /testA
+RUN printf "hello\n" > /testA/hello
+RUN printf "hello\n" > /testA/hello_again
+VOLUME /testA
+# This one does not change the content of the data
+RUN printf "hello\n" > /testA/hello
+# This one does change the content of the data
+RUN printf "hello again\n" > /testA/hello_again
+# This one adds a new file
+RUN printf "hello yet again\n" > /testA/hello_yet_again
+```
+which tests the effect of modifying a volume after declaring it
+
++ by overwriting a file with the same content.
++ by overwriting a file with different content.
++ by generating a new file.
+
+In line with [[4]], the resulting docker image contains none of the modifications.
+
+Now, consider [this dockerfile](dockerfiles/VOLUME/Dockerfile_VOLUME_test_02)
+```
+FROM alpine
+RUN mkdir /testA
+COPY hello /testA/
+COPY hello_again /testA/
+VOLUME /testA
+# This one does not change the content of the data
+RUN printf "hello\n" > /testA/hello
+# This one does change the content of the data
+RUN printf "hello again\n" > /testA/hello_again
+# This one adds a new file
+RUN printf "hello yet again\n" > /testA/hello_yet_again
+```
+which replaces the RUN instructions before VOLUME with COPY instructions, which retrieve the files from the building context. The files are subsequently modified analogously to the previous dockerfile. Once again, in line with [[4]], the resulting docker image contains none of the modifications.
+
+However, consider [this other dockerfile](dockerfiles/VOLUME/Dockerfile_VOLUME_test_03)
+```
+FROM alpine
+RUN mkdir /testA
+RUN printf "hello\n" > /testA/hello
+RUN printf "hello again\n" > /testA/hello_again
+VOLUME /testA
+# This one does not change the content of the data
+COPY hello /testA/
+# This one does change the content of the data
+COPY hello_again /testA/
+# This one adds a new file
+COPY hello_yet_again /testA/
+```
+which preserves the RUN instructions before VOLUME but replaces the ones after it with COPY instructions. Seemingly in contradiction with [[4]], the resulting docker image contains not the ogirinal files created before VOLUME, but all the files created after it by the COPY instructions. The result is the same if all the RUN instructions are replaced by COPY instructions.
+
+### Missing CMD and ENTRYPOINT
+
+As mentioned in [[5]], dockerfiles must have at least a CMD or ENTRYPOINT instruction. However, they need not be explicitly declared nor point to an actual executable for the build to succeed. Consider [this dockerfile](dockerfile/CMD/Dockerfile_CMD_test_01)
+```
+FROM scratch
+COPY hello /test/
+CMD [""]
+```
+which has an empty string for command, or [this dockerfile](dockerfile/CMD/Dockerfile_CMD_test_02)
+```
+FROM scratch
+COPY hello /test/
+ENTRYPOINT [""]
+```
+which has an empty string for entry point, or [this dockerfile](dockerfile/CMD/Dockerfile_CMD_test_03)
+```
+FROM alpine
+COPY hello /test/
+```
+which has neither CMD nor ENTRYPOINT. All of them will successfully produce an image containing the specified file. This can be verified by running
+```
+docker export $(docker create <imageid>) | tar t
+```
+
+The first two images cannot be run with `docker run [-it] <imageid>`. However, the last one can be run despite having neither CMD nor ENTRYPOINT instructions. This is because the CMD instruction is inheretid from the `alpine` image. Hence, CMD and ENTRYPOINT need not explicitly appear in a dockerfile.
+
 
 ## References
 [1]: https://docs.docker.com/engine/reference/builder/#parser-directives
 [2]: https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 [3]: https://vsupalov.com/docker-arg-env-variable-guide/
+[4]: https://docs.docker.com/engine/reference/builder/#notes-about-specifying-volumes
+[5]: https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
+
+
 
 1. [Dockerfile reference: Parser directives](https://docs.docker.com/engine/reference/builder/#parser-directives)
 2. [Dockerfile reference: How ARG and FROM interact](https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact)
 3. https://vsupalov.com/docker-arg-env-variable-guide/
+4. [Notes about specifying volumes](https://docs.docker.com/engine/reference/builder/#notes-about-specifying-volumes)
+5. [Understand how CMD and ENTRYPOINT interact](https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact)

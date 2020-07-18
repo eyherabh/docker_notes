@@ -1,9 +1,7 @@
 # Initial dockerfile for testing VOLUMNE
 
-FROM alpine
+FROM scratch
 COPY hello /test/
-VOLUME /test
-COPY hello_again /test/
 ENTRYPOINT [""]
 
 
