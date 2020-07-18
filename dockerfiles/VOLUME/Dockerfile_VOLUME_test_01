@@ -1,0 +1,17 @@
+# Initial dockerfile for testing VOLUMNE
+
+FROM alpine
+RUN mkdir /testA
+RUN printf "hello\n" > /testA/hello
+RUN printf "hello\n" > /testA/hello_again
+VOLUME /testA
+# This one does not change the content of the data
+RUN printf "hello\n" > /testA/hello
+# This one does change the content of the data
+RUN printf "hello again\n" > /testA/hello_again
+# This one adds a new file
+RUN printf "hello yet again\n" > /testA/hello_yet_again
+
+
+
+
