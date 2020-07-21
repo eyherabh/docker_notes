@@ -7,6 +7,8 @@ Notes, tips and issues that may be useful for docker development
    * [ARG values in multistage builds](#arg-values-in-multistage-builds)
    * [Preserve changes after declaring VOLUME](#preserve-changes-after-declaring-volume)
    * [Missing CMD and ENTRYPOINT](#missing-cmd-and-entrypoint)
+   * [ENV always overrides ARG regardless of its position](#env-always-overrides-arg-regardless-of-its-position)
+   * [Only ENV variables in the last building stage are preserved in the final image](#only-env-variables-in-the-last-building-stage-are-preserved-in-the-final-image)
   * [References](#references)
 
 ### Errors in ADD pass unnoticed
@@ -298,6 +300,45 @@ docker export $(docker create <imageid>) | tar t
 ```
 
 The first two images cannot be run with `docker run [-it] <imageid>`. However, the last one can be run despite having neither CMD nor ENTRYPOINT instructions. This is because the CMD instruction is inheretid from the `alpine` image. Hence, CMD and ENTRYPOINT need not explicitly appear in a dockerfile.
+
+
+### ENV always overrides ARG regardless of its position
+
+ENV variables are said to override ARG variables, but the examples in [[6]] may leave one thinking that it only occurs because ENV is used after ARG. To add to the conffusion, it is there also said that the overriding works as in the shell. Turns out that this is not the case, and ENV variables always override ARG variables, even if the ENV instruction appears before the ARG instruction.
+
+To test this, consider [this dockerfile](dockerfile/ENV/Dockerfile_ENV_test_01)
+```
+FROM alpine
+ARG q1=q1
+ENV q1=q1e
+ENV q2=q2e
+ARG q2=q2    
+RUN touch "$q1.$q2"
+
+ENTRYPOINT ["/bin/sh"]
+```
+Here, `q1` is first set by ARG and then by ENV, whereas `q2` is first set in ENV and then in ARG. The image produced contains the file `q1e.q2e`, thereby indicating that the values of `q1` and `q2` are those set by the ENV instructions, regardless of their ordering with respect to the ARG instructions.
+
+### Only ENV variables in the last building stage are preserved in the final image
+
+In [[6]], it is shown how to leverage the ENV instruction to persist in the built image command-line arguments passed with --build-args. However, it fails to mention that it only works when the technique is used in the last building stage. 
+
+To illustrate this, consider [this dockerfile](dockerfile/ENV/Dockerfile_ENV_test_02)
+```
+FROM alpine
+ARG q1=q1
+ENV q1=q1e
+ENV q2=q2e
+ARG q2=q2    
+RUN touch "$q1.$q2"
+
+FROM alpine
+ENV q3=q3
+    
+ENTRYPOINT ["/bin/sh"]
+```
+which is the same as the one in the previous section, except for the building stage inserted immediately before the ENTRYPOINT instruction. The resulting image contains the file `q1e.q2e` as before, but this time, it only contains `q3` in the environment (i.e. `q1` and `q2` are now missing).
+
 
 
 ## References

@@ -1,0 +1,14 @@
+# Initial dockerfile for testing ARG and ENV precedence
+
+FROM alpine
+ARG q1=q1
+ENV q1=q1e
+ENV q2=q2e
+ARG q2=q2    
+RUN touch "$q1.$q2"
+
+FROM alpine
+ENV q3=q3
+    
+ENTRYPOINT ["/bin/sh"]
+
