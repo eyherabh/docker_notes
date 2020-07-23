@@ -1,5 +1,6 @@
-# Docker notes
-Notes, tips and issues that may be useful for docker development
+# Dockerfile reference, revisited
+
+The sections below aim at filling the gaps and correct omissions in the Dockerfile reference [[7]], hopefully aiding with docker developement.
 
   * [Dockerfile](#dockerfile)
    * [Errors in ADD pass unnoticed](#errors-in-add-pass-unnoticed)
