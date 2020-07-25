@@ -338,7 +338,7 @@ ENV q3=q3
     
 ENTRYPOINT ["/bin/sh"]
 ```
-which is the same as the one in the previous section, except for the building stage inserted immediately before the ENTRYPOINT instruction. The resulting image contains the file `q1e.q2e` as before, but this time, it only contains `q3` in the environment (i.e. `q1` and `q2` are now missing).
+which is the same as the one in the previous section, except for the building stage inserted immediately before the ENTRYPOINT instruction. The resulting image contains the same file `q1e.q2e` as the previous image, but this time, it only contains `q3` in the environment (i.e. `q1` and `q2` are now missing).
 
 
 
