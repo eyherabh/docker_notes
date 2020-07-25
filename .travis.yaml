@@ -1,0 +1,7 @@
+deploy:
+  provider: pages
+  skip_cleanup: true
+  github_token: $TRAVIS_CI_GH_PAGES
+  keep_history: true
+  on:
+    branch: master
